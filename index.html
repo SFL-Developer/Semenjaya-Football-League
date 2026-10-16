@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SFL Football</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101820;color:white;font-family:Arial,sans-serif;text-align:center;overflow:hidden;touch-action:none}
+header{padding:10px;background:#17252f}
+h2{margin:0;color:#67e8a5}
+#score{font-size:25px;font-weight:bold;margin:6px}
+#game{display:block;width:100%;max-height:58vh;touch-action:none}
+.controls{display:flex;justify-content:space-around;align-items:center;padding:12px;gap:8px}
+.pad{display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:44px 44px 44px;gap:3px}
+button{border:0;border-radius:12px;background:#263c4c;color:white;font-size:17px;font-weight:bold;touch-action:none}
+.pad button{background:#355568}
+.action{width:83px;height:65px;background:#16864b}
+#pass{background:#2469b2}
+small{color:#b8c8d3}
+</style>
+</head>
+<body>
+<header>
+<h2>⚽ SEMENJAYA FOOTBALL LEAGUE</h2>
+<div id="score">3F 0 - 0 AI</div>
+<small id="status">Perlawanan persahabatan · 3F</small>
+</header>
+<canvas id="game" width="800" height="460"></canvas>
+<div class="controls">
+<div class="pad">
+<div></div><button data-dir="up">▲</button><div></div>
+<button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
+<div></div><div></div><div></div>
+</div>
+<button class="action" id="pass">HANTAR</button>
+<button class="action" id="shoot">TENDANG</button>
+</div>
+<button id="restart" style="padding:10px 24px;margin-bottom:5px">MULA SEMULA</button>
+<br><small>Gerakkan pemain biru. Dekati bola dan tendang ke gol merah.</small>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+const scoreEl=document.getElementById('score'),statusEl=document.getElementById('status');
+const W=800,H=460;
+let keys={},score=[0,0],ended=false,lastGoal=0;
+const player={x:180,y:230,r:17,speed:3.3};
+const ai={x:620,y:230,r:17};
+const ball={x:400,y:230,r:9,vx:0,vy:0};
+function resetPositions(){
+ player.x=180;player.y=230;ai.x=620;ai.y=230;
+ ball.x=400;ball.y=230;ball.vx=ball.vy=0;
+}
+function restart(){score=[0,0];ended=false;resetPositions();updateScore();statusEl.textContent='Perlawanan persahabatan · 3F';}
+function updateScore(){scoreEl.textContent=`3F ${score[0]} - ${score[1]} AI`;}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function moveToward(a,x,y,s){
+ let dx=x-a.x,dy=y-a.y,d=Math.hypot(dx,dy)||1;
+ a.x+=dx/d*s;a.y+=dy/d*s;
+}
+function kick(who,power,goalX){
+ let dx=goalX-ball.x,dy=230-ball.y,d=Math.hypot(dx,dy)||1;
+ ball.vx=dx/d*power;ball.vy=dy/d*power;
+ if(Math.abs(ball.y-230)>75)ball.vy+=(230-ball.y)*0.035;
+}
+function goal(team){
+ score[team]++;
+ updateScore();
+ statusEl.textContent=team===0?'GOOOL! 3F menjaringkan gol!':'AI menjaringkan gol!';
+ lastGoal=Date.now();
+ resetPositions();
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#14783d';ctx.fillRect(0,0,W,H);
+ for(let i=0;i<8;i++){ctx.fillStyle=i%2?'#188346':'#167c40';ctx.fillRect(i*100,0,100,H);}
+ ctx.strokeStyle='white';ctx.lineWidth=3;ctx.strokeRect(20,20,760,420);
+ ctx.beginPath();ctx.moveTo(400,20);ctx.lineTo(400,440);ctx.stroke();
+ ctx.beginPath();ctx.arc(400,230,65,0,Math.PI*2);ctx.stroke();
+ ctx.strokeRect(20,135,105,190);ctx.strokeRect(675,135,105,190);
+ ctx.strokeRect(20,180,40,100);ctx.strokeRect(740,180,40,100);
+ ctx.fillStyle='#e9e9e9';ctx.fillRect(0,175,20,110);ctx.fillRect(780,175,20,110);
+ function drawPlayer(p,color,label){
+  ctx.beginPath();ctx.fillStyle='rgba(0,0,0,.25)';ctx.ellipse(p.x,p.y+12,17,7,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.fillStyle=color;ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle='white';ctx.stroke();
+  ctx.fillStyle='white';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.fillText(label,p.x,p.y+4);
+ }
+ drawPlayer(player,'#168bff','3F');
+ drawPlayer(ai,'#ef4444','AI');
+ ctx.beginPath();ctx.fillStyle='white';ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle='#222';ctx.font='bold 9px Arial';ctx.fillText('⬟',ball.x,ball.y+3);
+}
+function update(){
+ if(!ended){
+  let dx=0,dy=0;
+  if(keys.up)dy--;if(keys.down)dy++;if(keys.left)dx--;if(keys.right)dx++;
+  let d=Math.hypot(dx,dy)||1;
+  player.x=clamp(player.x+dx/d*player.speed,35,765);
+  player.y=clamp(player.y+dy/d*player.speed,35,425);
+  if(dist(ai,ball)>24)moveToward(ai,ball.x,ball.y,2.0);
+  else if(ball.x<player.x)kick(ai,4,15);
+  if(dist(player,ball)<player.r+ball.r+3){
+   ball.vx+=(ball.x-player.x)*0.07;
+   ball.vy+=(ball.y-player.y)*0.07;
+  }
+  if(dist(ai,ball)<ai.r+ball.r+2){
+   ball.vx-=2.2;
+   ball.vy+=(Math.random()-.5)*1.4;
+  }
+  ball.x+=ball.vx;ball.y+=ball.vy;
+  ball.vx*=0.986;ball.vy*=0.986;
+  if(ball.y<30||ball.y>430){ball.y=clamp(ball.y,30,430);ball.vy*=-0.8;}
+  if(ball.x<20){
+   if(ball.y>175&&ball.y<285)goal(1);
+   else{ball.x=20;ball.vx=Math.abs(ball.vx)*.8;}
+  }
+  if(ball.x>780){
+   if(ball.y>175&&ball.y<285)goal(0);
+   else{ball.x=780;ball.vx=-Math.abs(ball.vx)*.8;}
+  }
+  if(Date.now()-lastGoal>2500&&lastGoal!==0){statusEl.textContent='Perlawanan persahabatan · 3F';lastGoal=0;}
+ }
+ draw();requestAnimationFrame(update);
+}
+document.querySelectorAll('[data-dir]').forEach(b=>{
+ const dir=b.dataset.dir;
+ b.addEventListener('pointerdown',e=>{e.preventDefault();keys[dir]=true;});
+ ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>keys[dir]=false));
+});
+document.getElementById('shoot').addEventListener('pointerdown',e=>{
+ e.preventDefault();
+ if(dist(player,ball)<85){
+  let targetX=ball.x<400?15:785;
+  kick(player,9,targetX);
+  if(ball.x>400){ball.vx=-Math.abs(ball.vx);}
+  else ball.vx=Math.abs(ball.vx);
+ }
+});
+document.getElementById('pass').addEventListener('pointerdown',e=>{
+ e.preventDefault();
+ if(dist(player,ball)<85){
+  ball.vx=player.x<400?6:-6;
+  ball.vy=(Math.random()-.5)*2;
+ }
+});
+document.getElementById('restart').addEventListener('click',restart);
+window.addEventListener('keydown',e=>{
+ const k={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key];
+ if(k){keys[k]=true;e.preventDefault();}
+});
+window.addEventListener('keyup',e=>{
+ const k={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key];
+ if(k)keys[k]=false;
+});
+restart();update();
+</script>
+</body>
+</html>
