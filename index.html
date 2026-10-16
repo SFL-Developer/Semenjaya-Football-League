@@ -43,6 +43,34 @@
   button { padding: 12px 8px; font-size: 13px; }
   #msg { display: none; }
 }
+
+#game canvas {
+  position: relative;
+  z-index: 0;
+}
+
+#score,
+.controls,
+#landscape {
+  position: absolute;
+  z-index: 20;
+}
+
+.controls {
+  pointer-events: none;
+}
+
+.controls button,
+.controls #stick,
+#landscape {
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.controls button {
+  position: relative;
+  z-index: 30;
+}
   
   <style>
 *{box-sizing:border-box}
