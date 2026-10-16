@@ -1,299 +1,50 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ms">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>SFL 3D Football</title>
-@media (orientation: landscape) {
-  header { display: none; }
-  #game { height: 100dvh; }
-  #score {
-    position: absolute;
-    z-index: 3;
-    top: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 4px 12px;
-    background: #14232c;
-    border-radius: 8px;
-    font-size: 20px;
-  }
-  .controls {
-    position: absolute;
-    z-index: 2;
-    inset: 0;
-    width: 100%;
-    height: 100dvh;
-    padding: 12px;
-    justify-content: space-between;
-    pointer-events: none;
-  }
-  .controls > * { pointer-events: auto; }
-  .controls > div:last-child {
-    align-self: flex-end;
-  }
-  #stick {
-    width: 90px;
-    height: 90px;
-    min-width: 90px;
-    align-self: flex-end;
-  }
-  #knob { left: 22px; top: 22px; }
-  button { padding: 12px 8px; font-size: 13px; }
-  #msg { display: none; }
-}
-
-#game canvas {
-  position: relative;
-  z-index: 0;
-}
-
-#score,
-.controls,
-#landscape {
-  position: absolute;
-  z-index: 20;
-}
-
-.controls {
-  pointer-events: none;
-}
-
-.controls button,
-.controls #stick,
-#landscape {
-  pointer-events: auto;
-  touch-action: manipulation;
-}
-
-.controls button {
-  position: relative;
-  z-index: 30;
-}
-  
-  <style>
-*{box-sizing:border-box}
-body{margin:0;background:#101820;color:white;font-family:Arial;overflow:hidden}
-header{text-align:center;background:#14232c;padding:8px;font-weight:bold;color:#71f5a7}
-#score{text-align:center;font-size:24px;padding:8px;font-weight:bold}
-#game{height:64vh;width:100%;touch-action:none}
-canvas{display:block}
-.controls{height:22vh;display:flex;align-items:center;justify-content:space-around;gap:12px;padding:8px}
-#stick{width:105px;height:105px;min-width:105px;border-radius:50%;background:#354b59;border:3px solid #9fb4c1;position:relative;touch-action:none}
-#knob{position:absolute;left:29px;top:29px;width:41px;height:41px;border-radius:50%;background:#71f5a7}
-button{background:#087c49;color:white;border:2px solid #64e6a0;border-radius:13px;padding:14px 10px;font-weight:bold;font-size:15px;margin:3px}
-#msg{text-align:center;font-size:12px;color:#cbd5e1}
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101820;color:#fff;font-family:Arial,sans-serif;touch-action:manipulation}
+header{height:36px;display:flex;align-items:center;justify-content:center;background:#14232c;color:#71f5a7;font-weight:bold;font-size:14px}
+#score{position:absolute;z-index:5;top:40px;left:50%;transform:translateX(-50%);padding:5px 12px;background:#14232cdd;border-radius:9px;font-weight:bold;font-size:20px;white-space:nowrap;pointer-events:none}
+#game{position:absolute;inset:36px 0 0;height:calc(100dvh - 36px);width:100%;touch-action:none}#game canvas{display:block;width:100%;height:100%}
+.controls{position:absolute;z-index:10;inset:0;display:flex;justify-content:space-between;align-items:flex-end;padding:12px;pointer-events:none}
+#stick{width:94px;height:94px;min-width:94px;border-radius:50%;background:#354b59cc;border:3px solid #b5c8d2;position:relative;touch-action:none;pointer-events:auto}
+#knob{position:absolute;left:24px;top:24px;width:40px;height:40px;border-radius:50%;background:#71f5a7}
+.actions{display:flex;gap:5px;align-items:flex-end;pointer-events:auto}button{position:relative;z-index:12;background:#087c49;color:white;border:2px solid #64e6a0;border-radius:12px;padding:13px 9px;font-size:14px;font-weight:bold;touch-action:manipulation;pointer-events:auto}
+#landscape{position:absolute;z-index:30;top:4px;right:5px;padding:6px 8px;font-size:11px;background:#243746}
+#msg{position:absolute;z-index:4;bottom:2px;left:0;width:100%;text-align:center;font-size:10px;color:#fff;pointer-events:none}
+@media (orientation:landscape){header{display:none}#game{inset:0;height:100dvh}#score{top:5px}.controls{height:100dvh;padding:10px 14px}.actions{margin-bottom:0}#stick{width:90px;height:90px;min-width:90px}#knob{left:22px;top:22px}#msg{display:none}}
 </style>
 </head>
 <body>
 <header>SEMENJAYA FOOTBALL LEAGUE • 3D</header>
-<div id="score">3F 0 - 0 AI</div>
+<div id="score">3F 0 - 0 AI</div><button id="landscape">FULLSCREEN</button>
 <div id="game"></div>
-<div class="controls">
-  <div id="stick"><div id="knob"></div></div>
-  <div>
-    <button id="pass">PAS</button>
-    <button id="shoot">SHOOT</button>
-    <button id="reset">RESET</button>
-  </div>
-</div>
+<div class="controls"><div id="stick"><div id="knob"></div></div><div class="actions"><button id="pass">PAS</button><button id="shoot">SHOOT</button><button id="reset">RESET</button></div></div>
 <div id="msg">Joystick untuk bergerak • Dekati bola untuk menendang</div>
-
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-
-const area=document.querySelector('#game');
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87ceeb);
-scene.fog=new THREE.Fog(0x87ceeb,45,90);
-
-const camera=new THREE.PerspectiveCamera(48,area.clientWidth/area.clientHeight,.1,200);
-camera.position.set(0,15,23);
-
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-renderer.setSize(area.clientWidth,area.clientHeight);
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-area.appendChild(renderer.domElement);
-
-scene.add(new THREE.HemisphereLight(0xffffff,0x426342,2.1));
-const sun=new THREE.DirectionalLight(0xffffff,2.5);
-sun.position.set(-10,20,10);
-sun.castShadow=true;
-scene.add(sun);
-
-function material(color){return new THREE.MeshStandardMaterial({color,roughness:.8})}
-function block(w,h,d,color,x,y,z){
- const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
- o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o;
-}
-
-// Padang dan jalur rumput
-block(32,.25,48,0x167b39,0,-.15,0);
-for(let i=0;i<8;i++)block(32,.015,6, i%2?0x208c43:0x167b39,0,-.015,-21+i*6);
-
-// Garisan padang
-function line(points,color=0xffffff){
- const g=new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(...p)));
- scene.add(new THREE.Line(g,new THREE.LineBasicMaterial({color})));
-}
-line([[-15,0,-22],[15,0,-22],[15,0,22],[-15,0,22],[-15,0,-22]]);
-line([[-15,0,0],[15,0,0]]);
-function circle(radius,y,z){
- const c=new THREE.Mesh(new THREE.RingGeometry(radius-.045,radius,.96),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));
- c.rotation.x=-Math.PI/2;c.position.set(0,y,z);scene.add(c);
-}
-circle(4,.015,0);circle(.15,.02,0);
-for(const z of [-22,22]){
- const dir=z<0?-1:1;
- line([[-7,0,z-dir*5],[7,0,z-dir*5],[7,0,z],[ -7,0,z],[-7,0,z-dir*5]]);
- line([[-3.5,0,z],[3.5,0,z]]);
- block(7,.15,.25,0xffffff,0,2,z);
- block(.2,4,.25,0xffffff,-3.5,0,z);
- block(.2,4,.25,0xffffff,3.5,0,z);
-}
-
-// Tempat duduk stadium ringkas
-for(let side of [-1,1]){
- for(let row=0;row<3;row++){
-  block(3,.7,43,0x374b66,side*(18+row*1.1),.4+row*.65,0);
- }
- for(let z=-18;z<=18;z+=2){
-  block(.8,.4,.8,z%4===0?0xf3d35b:0xe6edf5,side*18.2,1.1,z);
- }
-}
-
-// Pemain 3D
-function makePlayer(color,shorts,x,z){
- const g=new THREE.Group();
- const shirt=material(color),pants=material(shorts),skin=material(0xc58d68),shoe=material(0x15191e);
- const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.43,.65,4,8),shirt);
- torso.position.y=1.35;torso.castShadow=true;g.add(torso);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.27,16,12),skin);
- head.position.y=2.15;head.castShadow=true;g.add(head);
- const hair=new THREE.Mesh(new THREE.SphereGeometry(.28,12,8,0,Math.PI*2,0,Math.PI/2),material(0x21180f));
- hair.position.y=2.26;g.add(hair);
- const legs=[];
- for(const s of [-1,1]){
-  const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.48,3,6),pants);
-  leg.position.set(s*.19,.55,0);leg.castShadow=true;g.add(leg);legs.push(leg);
-  const foot=block(.22,.13,.36,0x15191e,0,-20,0);
-  scene.remove(foot);foot.position.set(s*.19,.16,-.1);g.add(foot);
- }
- g.position.set(x,0,z);scene.add(g);
- return {g,legs};
-}
-const user=makePlayer(0x1678ff,0x102d68,0,9);
-const rival=makePlayer(0xe53935,0x222222,3,-7);
-
-// Bola 3D
-const ball=new THREE.Group();
-const sphere=new THREE.Mesh(new THREE.SphereGeometry(.38,24,18),material(0xffffff));
-sphere.castShadow=true;ball.add(sphere);
-const patchMat=material(0x171717);
-for(let i=0;i<5;i++){
- const a=i*Math.PI*2/5;
- const patch=new THREE.Mesh(new THREE.CircleGeometry(.105,6),patchMat);
- patch.position.set(Math.cos(a)*.32,Math.sin(a)*.32,0);
- patch.lookAt(patch.position.clone().multiplyScalar(3));
- sphere.add(patch);
-}
-ball.position.set(0,.4,5);scene.add(ball);
-
-let score=0,aiScore=0,bvx=0,bvz=0,moveX=0,moveZ=0;
-const scoreEl=document.querySelector('#score');
-function updateScore(){scoreEl.textContent=`3F ${score} - ${aiScore} AI`}
-function kick(power){
- const dx=ball.position.x-user.g.position.x;
- const dz=ball.position.z-user.g.position.z;
- if(Math.hypot(dx,dz)>3.3)return;
- const len=Math.hypot(dx,dz)||1;
- bvx=dx/len*power;
- bvz=dz/len*power;
- if(power>.4)bvz=-Math.abs(power)*1.5;
-}
-document.querySelector('#pass').onclick=()=>kick(.24);
-document.querySelector('#shoot').onclick=()=>kick(.75);
-document.querySelector('#reset').onclick=()=>{
- score=0;aiScore=0;updateScore();
- user.g.position.set(0,0,9);rival.g.position.set(3,0,-7);
- ball.position.set(0,.4,5);bvx=0;bvz=0;
-};
-
-// Joystick sentuh
-const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');
-let active=false;
-function joystick(e){
- const r=stick.getBoundingClientRect();
- let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;
- const len=Math.hypot(x,y),max=32;
- if(len>max){x=x/len*max;y=y/len*max}
- moveX=x/max;moveZ=y/max;
- knob.style.left=(29+x)+'px';knob.style.top=(29+y)+'px';
-}
-stick.addEventListener('pointerdown',e=>{active=true;stick.setPointerCapture(e.pointerId);joystick(e)});
-stick.addEventListener('pointermove',e=>{if(active)joystick(e)});
-function stop(){active=false;moveX=0;moveZ=0;knob.style.left='29px';knob.style.top='29px'}
-stick.addEventListener('pointerup',stop);
-stick.addEventListener('pointercancel',stop);
-window.addEventListener('keydown',e=>{
- if(e.key==='ArrowLeft'||e.key==='a')moveX=-1;
- if(e.key==='ArrowRight'||e.key==='d')moveX=1;
- if(e.key==='ArrowUp'||e.key==='w')moveZ=-1;
- if(e.key==='ArrowDown'||e.key==='s')moveZ=1;
- if(e.key===' ')kick(.75);
-});
-window.addEventListener('keyup',e=>{
- if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','d','w','s'].includes(e.key)){moveX=0;moveZ=0}
-});
-
-let last=0;
-function animate(t){
- requestAnimationFrame(animate);
- const dt=Math.min((t-last)/16.67,2)||1;last=t;
- user.g.position.x+=moveX*.12*dt;
- user.g.position.z+=moveZ*.12*dt;
- user.g.position.x=THREE.MathUtils.clamp(user.g.position.x,-14,14);
- user.g.position.z=THREE.MathUtils.clamp(user.g.position.z,-21,21);
- user.legs.forEach((leg,i)=>{leg.rotation.x=(Math.abs(moveX)+Math.abs(moveZ))>.1?Math.sin(t*.015+i*Math.PI)*.5:0});
-
- // AI bergerak ke arah bola
- const ax=ball.position.x-rival.g.position.x,az=ball.position.z-rival.g.position.z;
- const dist=Math.hypot(ax,az)||1;
- if(dist>1.6){
-  rival.g.position.x+=ax/dist*.035*dt;
-  rival.g.position.z+=az/dist*.035*dt;
- }else{
-  bvx+=ax/dist*.012*dt;bvz+=az/dist*.012*dt;
- }
-
- ball.position.x+=bvx*dt;ball.position.z+=bvz*dt;
- bvx*=Math.pow(.985,dt);bvz*=Math.pow(.985,dt);
- if(Math.abs(ball.position.x)>14){ball.position.x=Math.sign(ball.position.x)*14;bvx*=-.7}
- if(ball.position.z < -23 || ball.position.z > 23){
-  if(ball.position.z<0)score++;else aiScore++;
-  updateScore();ball.position.set(0,.4,0);bvx=0;bvz=0;
- }
- ball.position.y=.4+Math.abs(Math.sin(t*.008))*Math.min(.2,Math.hypot(bvx,bvz));
- ball.rotation.x+=.04*dt;ball.rotation.z+=.03*dt;
-
- camera.position.x+=(user.g.position.x-camera.position.x)*.035;
- camera.position.z+=(user.g.position.z+14-camera.position.z)*.035;
- camera.lookAt(user.g.position.x,0,user.g.position.z-2);
- renderer.render(scene,camera);
-}
-window.addEventListener('resize',()=>{
- camera.aspect=area.clientWidth/area.clientHeight;
- camera.updateProjectionMatrix();
- renderer.setSize(area.clientWidth,area.clientHeight);
-});
-requestAnimationFrame(animate);
-</script>
-</body>
-</html>
-
-
-
-
+const area=document.querySelector('#game'),scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.Fog(0x87ceeb,45,90);
+const camera=new THREE.PerspectiveCamera(48,1,.1,200);camera.position.set(0,15,23);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;area.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x426342,2.1));const sun=new THREE.DirectionalLight(0xffffff,2.3);sun.position.set(-10,20,10);sun.castShadow=true;scene.add(sun);
+function mat(c){return new THREE.MeshStandardMaterial({color:c,roughness:.8})}function block(w,h,d,c,x,y,z,parent=scene){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+block(32,.25,48,0x167b39,0,-.15,0);for(let i=0;i<8;i++)block(32,.015,6,i%2?0x208c43:0x167b39,0,-.015,-21+i*6);
+function line(ps){const g=new THREE.BufferGeometry().setFromPoints(ps.map(p=>new THREE.Vector3(...p)));scene.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff})))}
+line([[-15,0,-22],[15,0,-22],[15,0,22],[-15,0,22],[-15,0,-22]]);line([[-15,0,0],[15,0,0]]);
+const ring=new THREE.Mesh(new THREE.RingGeometry(3.95,4,.96),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.02;scene.add(ring);
+for(const z of [-22,22]){const dir=z<0?-1:1;line([[-7,0,z-dir*5],[7,0,z-dir*5],[7,0,z],[-7,0,z],[-7,0,z-dir*5]]);block(7,.15,.25,0xffffff,0,2,z);block(.2,4,.25,0xffffff,-3.5,0,z);block(.2,4,.25,0xffffff,3.5,0,z)}
+for(const s of [-1,1])for(let r=0;r<3;r++)block(2,.6,42,0x34495e,s*(18+r*1.2),.3+r*.6,0);
+function player(color,shorts,x,z){const g=new THREE.Group();const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.43,.65,4,8),mat(color));torso.position.y=1.35;g.add(torso);const head=new THREE.Mesh(new THREE.SphereGeometry(.27,16,12),mat(0xc58d68));head.position.y=2.15;g.add(head);const legs=[];for(const s of [-1,1]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.48,3,6),mat(shorts));leg.position.set(s*.19,.55,0);g.add(leg);legs.push(leg);block(.22,.13,.36,0x15191e,s*.19,.16,-.1,g)}g.position.set(x,0,z);scene.add(g);return {g,legs}}
+const user=player(0x1678ff,0x102d68,0,9),rival=player(0xe53935,0x222222,3,-7);
+const ball=new THREE.Group(),sphere=new THREE.Mesh(new THREE.SphereGeometry(.38,24,18),mat(0xffffff));ball.add(sphere);for(let i=0;i<5;i++){const a=i*Math.PI*2/5,p=new THREE.Mesh(new THREE.CircleGeometry(.11,6),mat(0x171717));p.position.set(Math.cos(a)*.32,Math.sin(a)*.32,.16);sphere.add(p)}ball.position.set(0,.4,5);scene.add(ball);
+let score=0,aiScore=0,bvx=0,bvz=0,mx=0,mz=0;const scoreEl=document.querySelector('#score');function updateScore(){scoreEl.textContent=`3F ${score} - ${aiScore} AI`}
+function kick(power){const dx=ball.position.x-user.g.position.x,dz=ball.position.z-user.g.position.z;if(Math.hypot(dx,dz)>3.5)return;const len=Math.hypot(dx,dz)||1;bvx=dx/len*power;bvz=(power>.4?-1:1)*Math.abs(dz/len||1)*power*1.5}
+document.querySelector('#pass').addEventListener('click',()=>kick(.25));document.querySelector('#shoot').addEventListener('click',()=>kick(.7));document.querySelector('#reset').addEventListener('click',()=>{score=0;aiScore=0;updateScore();user.g.position.set(0,0,9);rival.g.position.set(3,0,-7);ball.position.set(0,.4,5);bvx=bvz=0});
+document.querySelector('#landscape').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();if(screen.orientation?.lock)await screen.orientation.lock('landscape')}catch(e){alert('Hidupkan Putaran automatik dan pusing telefon ke sisi.')}});
+const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let active=false;function joy(e){const r=stick.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,l=Math.hypot(x,y),max=30;if(l>max){x=x/l*max;y=y/l*max}mx=x/max;mz=y/max;knob.style.left=(24+x)+'px';knob.style.top=(24+y)+'px'}stick.addEventListener('pointerdown',e=>{active=true;stick.setPointerCapture(e.pointerId);joy(e)});stick.addEventListener('pointermove',e=>{if(active)joy(e)});function stop(){active=false;mx=mz=0;knob.style.left='24px';knob.style.top='24px'}stick.addEventListener('pointerup',stop);stick.addEventListener('pointercancel',stop);
+function resize(){const w=area.clientWidth,h=area.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)}window.addEventListener('resize',resize);if(window.ResizeObserver)new ResizeObserver(resize).observe(area);resize();
+let last=0;function animate(t){requestAnimationFrame(animate);const dt=Math.min((t-last)/16.67,2)||1;last=t;user.g.position.x=THREE.MathUtils.clamp(user.g.position.x+mx*.13*dt,-14,14);user.g.position.z=THREE.MathUtils.clamp(user.g.position.z+mz*.13*dt,-21,21);user.legs.forEach((l,i)=>l.rotation.x=Math.hypot(mx,mz)>.1?Math.sin(t*.015+i*Math.PI)*.45:0);const ax=ball.position.x-rival.g.position.x,az=ball.position.z-rival.g.position.z,d=Math.hypot(ax,az)||1;if(d>1.5){rival.g.position.x+=ax/d*.035*dt;rival.g.position.z+=az/d*.035*dt}else{bvx+=ax/d*.01*dt;bvz+=az/d*.01*dt}ball.position.x+=bvx*dt;ball.position.z+=bvz*dt;bvx*=Math.pow(.985,dt);bvz*=Math.pow(.985,dt);if(Math.abs(ball.position.x)>14){ball.position.x=Math.sign(ball.position.x)*14;bvx*=-.7}if(ball.position.z < -23||ball.position.z>23){if(ball.position.z<0)score++;else aiScore++;updateScore();ball.position.set(0,.4,0);bvx=bvz=0}ball.position.y=.4+Math.abs(Math.sin(t*.008))*Math.min(.18,Math.hypot(bvx,bvz));ball.rotation.x+=.04*dt;ball.rotation.z+=.03*dt;camera.position.x+=(user.g.position.x-camera.position.x)*.035;camera.position.z+=(user.g.position.z+14-camera.position.z)*.035;camera.lookAt(user.g.position.x,0,user.g.position.z-2);renderer.render(scene,camera)}requestAnimationFrame(animate);
+</script></body></html>
